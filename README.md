@@ -77,12 +77,15 @@ To request permissions you should use this method:<br>
 Requirements:
 - iOS 10.0+
 - Xcode: 12.0+
+- AppLovin recommends that you update Xcode to version 12.5 or higher in order to stay ahead of anticipated minimum requirements.
 
 2.2.1 External Dependency Manager (Play Services Resolver)
 BidMachine Unity Plugin includes External Dependency Manager package. You need to complete these following steps to resolve BidMachine's dependencies:
 
 - After the import BidMachine Unity Plugin, in the Unity editor select File → Build Settings → iOS.
 - During build a project the modules, that are required for the BidMachine SDK support, will be imported to your project. You can edit them or add other modules in the Assets → BidMachine → Editor → BidMachineDependencies.xml file.
+
+#### Note: If you support ios versions below 14 then in xcode project open Build Phases - Link binary with libraries - and make AppTrackingTransparency.framework as optional.
 
 # Step 3. Integration
 
