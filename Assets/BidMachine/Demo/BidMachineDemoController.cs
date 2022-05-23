@@ -5,8 +5,11 @@ using System.Globalization;
 using UnityEngine;
 using BidMachineAds.Unity.Api;
 using BidMachineAds.Unity.Common;
+using AdmobAds = GoogleMobileAds.Api;
 using UnityEngine.Android;
 using UnityEngine.UI;
+using UnityEngine.Events;
+using System.Linq;
 
 #pragma warning disable 649
 
@@ -38,6 +41,16 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
     private BannerRequest bannerRequest;
     private BannerRequestBuilder bannerRequestBuilder;
     private BannerView bannerView;
+    private AdmobAds.BannerView admobBannerView;
+    private AdmobAds.InterstitialAd admobInterstitial;
+    private AdmobAds.RewardedAd admobRewarded;
+
+    public UnityEvent OnAdLoadedEvent;
+    public UnityEvent OnAdFailedToLoadEvent;
+    public UnityEvent OnAdOpeningEvent;
+    public UnityEvent OnAdFailedToShowEvent;
+    public UnityEvent OnUserEarnedRewardEvent;
+    public UnityEvent OnAdClosedEvent;
 
     //list of banner ads
     public static List<KeyValuePair<string, double>> bannerList = new List<KeyValuePair<string, double>>();
@@ -46,14 +59,56 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
     //list of rewarded ads
     public static List<KeyValuePair<string, double>> rewardedList = new List<KeyValuePair<string, double>>();
 
+    //list of admob banner ad units
+    public static List<KeyValuePair<string, double>> admobBannerList = new List<KeyValuePair<string, double>>{
+        new KeyValuePair<string, double>("ca-app-pub-3940256099942544/6300978111", 1.0),
+        new KeyValuePair<string, double>("ADMOB_BANNER_AD_UNIT_ID_2", 2.0),
+        new KeyValuePair<string, double>("ADMOB_BANNER_AD_UNIT_ID_3", 3.0),
+        new KeyValuePair<string, double>("ADMOB_BANNER_AD_UNIT_ID_4", 4.0),
+        new KeyValuePair<string, double>("ADMOB_BANNER_AD_UNIT_ID_5", 5.0),
+        new KeyValuePair<string, double>("ADMOB_BANNER_AD_UNIT_ID_6", 6.0),
+        new KeyValuePair<string, double>("ADMOB_BANNER_AD_UNIT_ID_7", 7.0),
+        new KeyValuePair<string, double>("ADMOB_BANNER_AD_UNIT_ID_8", 8.0),
+        new KeyValuePair<string, double>("ADMOB_BANNER_AD_UNIT_ID_9", 9.0),
+        new KeyValuePair<string, double>("ADMOB_BANNER_AD_UNIT_ID_10", 10.0)
+        };
+
+    //list of admob interstitial ad units
+    public static List<KeyValuePair<string, double>> admobInterstitialList = new List<KeyValuePair<string, double>>{
+        new KeyValuePair<string, double>("ca-app-pub-3940256099942544/1033173712", 1.0),
+        new KeyValuePair<string, double>("ca-app-pub-3940256099942544/1033173712", 2.0),
+        new KeyValuePair<string, double>("ca-app-pub-3940256099942544/1033173712", 3.0),
+        new KeyValuePair<string, double>("ca-app-pub-3940256099942544/4411468910", 4.0),
+        new KeyValuePair<string, double>("ca-app-pub-3940256099942544/4411468910", 5.0),
+        new KeyValuePair<string, double>("ca-app-pub-3940256099942544/4411468910", 6.0),
+        new KeyValuePair<string, double>("ADMOB_INTERSTITIAL_AD_UNIT_ID_7", 7.0),
+        new KeyValuePair<string, double>("ADMOB_INTERSTITIAL_AD_UNIT_ID_8", 8.0),
+        new KeyValuePair<string, double>("ADMOB_INTERSTITIAL_AD_UNIT_ID_9", 9.0),
+        new KeyValuePair<string, double>("ADMOB_INTERSTITIAL_AD_UNIT_ID_10", 10.0)
+        };
+
+    //list of admob interstitial ad units
+    public static List<KeyValuePair<string, double>> admobRewardedList = new List<KeyValuePair<string, double>>{
+        new KeyValuePair<string, double>("ca-app-pub-3940256099942544/5224354917", 1.0),
+        new KeyValuePair<string, double>("ca-app-pub-3940256099942544/5224354917", 2.0),
+        new KeyValuePair<string, double>("ca-app-pub-3940256099942544/5224354917", 3.0),
+        new KeyValuePair<string, double>("ca-app-pub-3940256099942544/1712485313", 4.0),
+        new KeyValuePair<string, double>("ca-app-pub-3940256099942544/1712485313", 5.0),
+        new KeyValuePair<string, double>("ca-app-pub-3940256099942544/1712485313", 6.0),
+        new KeyValuePair<string, double>("ADMOB_REWARDED_AD_UNIT_ID_7", 7.0),
+        new KeyValuePair<string, double>("ADMOB_REWARDED_AD_UNIT_ID_8", 8.0),
+        new KeyValuePair<string, double>("ADMOB_REWARDED_AD_UNIT_ID_9", 9.0),
+        new KeyValuePair<string, double>("ADMOB_REWARDED_AD_UNIT_ID_10", 10.0)
+    };
+
 
     // Insert your Applovin credentials here
 
-    private const string MaxSdkKey = "ENTER_MAX_SDK_KEY_HERE";
-    private const string InterstitialAdUnitId = "ENTER_INTERSTITIAL_AD_UNIT_ID_HERE";
+    private const string MaxSdkKey = "nEbqcf3QG6eAEo2g-uiJ68vz5F79ESvmug4ylkTR3bptCQ3zLDKdG6gp_CfhqOg9cu6MP5yT88tGDhNhbHXL60";//"ENTER_MAX_SDK_KEY_HERE";
+    private const string InterstitialAdUnitId = "6c5387d831b45a43";//"ENTER_INTERSTITIAL_AD_UNIT_ID_HERE";
     private const string RewardedAdUnitId = "ENTER_REWARD_AD_UNIT_ID_HERE";
     private const string RewardedInterstitialAdUnitId = "ENTER_REWARD_INTER_AD_UNIT_ID_HERE";
-    private const string BannerAdUnitId = "ENTER_BANNER_AD_UNIT_ID_HERE";
+    private const string BannerAdUnitId = "84f8469ecb805877";//"ENTER_BANNER_AD_UNIT_ID_HERE";
     private const string MRecAdUnitId = "ENTER_MREC_AD_UNIT_ID_HERE";
    
 
@@ -125,7 +180,185 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
         BidMachine.setLoggingEnabled(tgLogging.isOn);
         BidMachine.setTestMode(tgTesting.isOn);
         BidMachine.initialize("1");
+
+        // Initialize admob
+        AdmobAds.MobileAds.Initialize(initStatus => { });
     }
+
+    #region Admob ads
+
+    #region Admob banners
+
+    private void PrintStatus(string message)
+    {
+        Debug.Log(message);
+    }
+
+    public void RequestAdmobBannerAd(String admobBannerAdUnit)
+    {
+        PrintStatus("Requesting Banner ad.");
+
+        // Create a 320x50 banner at top of the screen
+        admobBannerView = new AdmobAds.BannerView(admobBannerAdUnit, AdmobAds.AdSize.Banner, AdmobAds.AdPosition.Bottom);
+
+        // Add Event Handlers
+        admobBannerView.OnAdLoaded += (sender, args) =>
+        {
+            PrintStatus("Banner ad loaded.");
+            OnAdLoadedEvent.Invoke();
+            //didn't find a way to show banner on the button click. It shows automatically after loading
+            admobBannerView.Hide();
+            //add the necessary admob ad unit to the bannerList
+            var admobPrice = admobBannerList.Find(x => x.Key == admobBannerAdUnit).Value;
+            bannerList.Add(new KeyValuePair<string, double>("admob", admobPrice));
+        };
+        admobBannerView.OnAdFailedToLoad += (sender, args) =>
+        {
+            PrintStatus("Banner ad failed to load with error: "+args.LoadAdError.GetMessage());
+            OnAdFailedToLoadEvent.Invoke();
+        };
+        admobBannerView.OnAdOpening += (sender, args) =>
+        {
+            PrintStatus("Banner ad opening.");
+            OnAdOpeningEvent.Invoke();
+        };
+        admobBannerView.OnAdClosed += (sender, args) =>
+        {
+            PrintStatus("Banner ad closed.");
+            OnAdClosedEvent.Invoke();
+        };
+        admobBannerView.OnPaidEvent += (sender, args) =>
+        {
+            string msg = string.Format("{0} (currency: {1}, value: {2}",
+                                        "Banner ad received a paid event.",
+                                        args.AdValue.CurrencyCode,
+                                        args.AdValue.Value);
+            PrintStatus(msg);
+            
+        };
+
+        // Create an empty ad request.
+        AdmobAds.AdRequest admobBannerRequest = new AdmobAds.AdRequest.Builder().Build();
+
+        // Load a banner ad
+        admobBannerView.LoadAd(admobBannerRequest);
+        
+    }
+
+    public void ShowAdmobBanner()
+    {
+        if (admobBannerView != null)
+        {
+            admobBannerView.Show();
+    
+        }
+    }
+
+    #endregion
+
+    #region Admob interstitial
+
+    public void RequestAdmobInterstitialAd(String admobInterstitialAdUnit)
+    {
+        // Initialize an InterstitialAd.
+        admobInterstitial = new AdmobAds.InterstitialAd(admobInterstitialAdUnit);
+
+        admobInterstitial.OnAdLoaded += (sender, args) =>
+        {
+            PrintStatus("Interstitial ad loaded.");
+            OnAdLoadedEvent.Invoke();
+            //add the necessary admob ad unit to the interstitialList
+            var admobPrice = admobInterstitialList.Find(x => x.Key == admobInterstitialAdUnit).Value;
+            interstitialList.Add(new KeyValuePair<string, double>("admob", admobPrice));
+        };
+        admobInterstitial.OnAdFailedToLoad += (sender, args) =>
+        {
+            PrintStatus("Interstitial ad failed to load with error: "+args.LoadAdError.GetMessage());
+            OnAdFailedToLoadEvent.Invoke();
+        };
+        admobInterstitial.OnAdOpening += (sender, args) =>
+        {
+            PrintStatus("Interstitial ad opening.");
+            OnAdOpeningEvent.Invoke();
+        };
+        admobInterstitial.OnAdClosed += (sender, args) =>
+        {
+            PrintStatus("Interstitial ad closed.");
+            OnAdClosedEvent.Invoke();
+        };
+        admobInterstitial.OnAdDidRecordImpression += (sender, args) =>
+        {
+            PrintStatus("Interstitial ad recorded an impression.");
+        };
+        admobInterstitial.OnAdFailedToShow += (sender, args) =>
+        {
+            PrintStatus("Interstitial ad failed to show.");
+        };
+        admobInterstitial.OnPaidEvent += (sender, args) =>
+        {
+            string msg = string.Format("{0} (currency: {1}, value: {2}",
+            "Interstitial ad received a paid event.",
+            args.AdValue.CurrencyCode,
+            args.AdValue.Value);
+            PrintStatus(msg);
+        };
+
+        // Create an empty ad request.
+        AdmobAds.AdRequest admobInterstitialRequest = new AdmobAds.AdRequest.Builder().Build();
+        // Load the interstitial with the request.
+        admobInterstitial.LoadAd(admobInterstitialRequest);
+    }
+
+    public void ShowAdmobInterstitial()
+    {
+        if (admobInterstitial.IsLoaded()) {
+            admobInterstitial.Show();
+        }
+    }
+
+    #endregion
+
+    #region Admob rewarded
+
+    public void RequestAdmobRewardedAd(String admobRewardedAdUnit)
+    {
+        admobRewarded = new AdmobAds.RewardedAd(admobRewardedAdUnit);
+
+        admobRewarded.OnAdLoaded += (sender, args) =>
+        {
+            PrintStatus("Rewarded ad loaded.");
+            OnAdLoadedEvent.Invoke();
+            //add the necessary admob ad unit to the rewardedList
+            var admobPrice = admobRewardedList.Find(x => x.Key == admobRewardedAdUnit).Value;
+            rewardedList.Add(new KeyValuePair<string, double>("admob", admobPrice));
+        };
+        admobRewarded.OnUserEarnedReward += (sender, args) =>
+        {
+            PrintStatus("User earned Reward ad reward: "+args.Amount);
+            OnUserEarnedRewardEvent.Invoke();
+        };
+        admobRewarded.OnAdClosed += (sender, args) =>
+        {
+            PrintStatus("Reward ad closed.");
+            OnAdClosedEvent.Invoke();
+        };
+
+        // Create an empty ad request.
+        AdmobAds.AdRequest admobRewardedRequest = new AdmobAds.AdRequest.Builder().Build();
+        // Load the rewarded ad with the request.
+        admobRewarded.LoadAd(admobRewardedRequest);
+    }
+
+    public void ShowAdmobRewarded()
+    {
+        if (admobRewarded != null)
+            {
+                admobRewarded.Show();
+            }
+    }
+    #endregion
+
+    #endregion
 
     #region Applovin Banner Ad Methods
 
@@ -140,7 +373,7 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
         // Banners are automatically sized to 320x50 on phones and 728x90 on tablets.
         // You may use the utility method `MaxSdkUtils.isTablet()` to help with view sizing adjustments.
         // MaxSdk.CreateBanner(BannerAdUnitId, MaxSdkBase.BannerPosition.BottomCenter);
-        // MaxSdk.StopBannerAutoRefresh(BannerAdUnitId);
+        MaxSdk.StopBannerAutoRefresh(BannerAdUnitId);
 
         // Set background or background color for banners to be fully functional.
         MaxSdk.SetBannerBackgroundColor(BannerAdUnitId, Color.black);
@@ -195,7 +428,7 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
           if (revenue > 0)
           {
             priceFloorParams = new PriceFloorParams();
-            priceFloorParams.addPriceFloor("applovin_max", revenue*1000);  
+            priceFloorParams.addPriceFloor("applovin_max", revenue*1000+0.01);  
             bannerRequest = new BannerRequestBuilder()
             .setSize(BannerSize.Size_320х50)
             .setPriceFloorParams(priceFloorParams)
@@ -270,7 +503,7 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
           if (revenue > 0)
           {
             priceFloorParams = new PriceFloorParams();
-            priceFloorParams.addPriceFloor("applovin_max", revenue*1000);  
+            priceFloorParams.addPriceFloor("applovin_max", revenue*1000+0.01);  
             interstitialRequest = new InterstitialRequestBuilder()   
              
               .setPriceFloorParams(priceFloorParams)
@@ -349,7 +582,6 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
         string adUnitIdentifier = adInfo.AdUnitIdentifier; // The MAX Ad Unit ID
         string placement = adInfo.Placement; // The placement this ad's postbacks are tied to
         
-        Debug.Log("Revenue: ------------" + revenue);
     }
 
     #endregion
@@ -363,7 +595,7 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
           if (revenue > 0)
           {
             priceFloorParams = new PriceFloorParams();
-            priceFloorParams.addPriceFloor("applovin_max", revenue*1000);  
+            priceFloorParams.addPriceFloor("applovin_max", revenue*1000+0.01);  
             rewardedRequest = new RewardedRequestBuilder()  
              
               .setPriceFloorParams(priceFloorParams)
@@ -518,7 +750,6 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
         {
             MaxSdk.CreateBanner(BannerAdUnitId, MaxSdkBase.BannerPosition.BottomCenter);
         }
-        
     }
 
     public void ShowBannerView()
@@ -531,25 +762,39 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
         {
             if (bannerList.Count > 0)
             {
-            //sort the list by price
-            bannerList.Sort((a, b) => (b.Value.CompareTo(a.Value)));
-        
-            //check for the first item with the highest price
-                if (bannerList[0].Key == "applovin_max")
+                //sort the list by price
+                bannerList.Sort((a, b) => (b.Value.CompareTo(a.Value)));
+                //check for the first item with the highest price
+                switch (bannerList[0].Key)
                 {
+                case "applovin_max":
                     MaxSdk.ShowBanner(BannerAdUnitId);
-                }   
-                else
-                {
+                    break;
+                case "bidmachine":
                     ShowBannerBidmachine();
+                    break;
+                case "admob":
+                    ShowAdmobBanner();
+                    break;
                 }
             }
-            else
-            {
-                ShowBannerBidmachine();
-            }
+        
         }
                    
+    }
+
+    public string CompareBannerPricesForAdmob()
+    {
+        if (bannerList.Count > 0)
+        {
+            bannerList.Sort((a, b) => (b.Value.CompareTo(a.Value)));
+            var admobAdUnitkey = admobBannerList.FirstOrDefault(x => x.Value > bannerList[0].Value).Key;
+            return admobAdUnitkey;
+        }
+        else
+        {
+            return "ca-app-pub-3940256099942544/6300978111";
+        }
     }
 
 
@@ -563,15 +808,15 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
 
     public void DestroyBanner()
     {
-        // MaxSdk.HideBanner(BannerAdUnitId);
         MaxSdk.DestroyBanner(BannerAdUnitId);
-        if (bannerView != null)
-        {
+        admobBannerView.Destroy();
+        // if (bannerView != null)
+        // {
             bannerView.hideBannerView();
             bannerView.destroy();
             bannerView = null;
             bannerRequest = null;
-        }
+        // }
         bannerList.Clear();
     }
 
@@ -605,19 +850,20 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
             //sort the list by price
             interstitialList.Sort((a, b) => (b.Value.CompareTo(a.Value)));
         
-            if (interstitialAd != null)
-            {
             //check for the first item (the highest price)
-                if (interstitialList[0].Key == "applovin_max")
+                switch (interstitialList[0].Key)
                 {
+                case "applovin_max":
                     ShowInterstitialApplovin();
-                }
-                else
-                {
+                    break;
+                case "bidmachine":
                     ShowInterstitialBidmachine();
+                    break;
+                case "admob":
+                    ShowAdmobInterstitial();
+                    break;
                 }
                        
-            } 
         }
     }
 
@@ -631,11 +877,26 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
 
     public void DestroyInterstitial()
     {
+        admobInterstitial.Destroy();
         if (interstitialAd != null)
         {
             interstitialAd.destroy();
             interstitialAd = null;
             interstitialRequest = null;
+        }
+    }
+
+    public string CompareInterstitialPricesForAdmob()
+    {
+        if (interstitialList.Count > 0)
+        {
+            interstitialList.Sort((a, b) => (b.Value.CompareTo(a.Value)));
+            var admobAdUnitkey = admobInterstitialList.FirstOrDefault(x => x.Value > interstitialList[0].Value).Key;
+            return admobAdUnitkey;
+        }
+        else
+        {
+            return "ca-app-pub-3940256099942544/1033173712";
         }
     }
 
@@ -667,19 +928,20 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
             //sort the list by price
             rewardedList.Sort((a, b) => (b.Value.CompareTo(a.Value)));
         
-            if (rewardedAd != null)
-            {
                 //check for the first item (the highest price)
-                if (rewardedList[0].Key == "applovin_max")
+                switch (rewardedList[0].Key)
                 {
+                case "applovin_max":
                     ShowRewardedApplovin();
-                }
-                else
-                {   
+                    break;
+                case "bidmachine":
                     ShowRewardedBidmachine();
+                    break;
+                case "admob":
+                    ShowAdmobRewarded();
+                    break;
                 }
-                     
-            } 
+              
         }
         
     }
@@ -698,6 +960,20 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
         rewardedAd.destroy();
         rewardedAd = null;
         rewardedRequest = null;
+    }
+
+    public string CompareRewardedPricesForAdmob()
+    {
+        if (rewardedList.Count >0)
+        {
+            rewardedList.Sort((a, b) => (b.Value.CompareTo(a.Value)));
+            var admobAdUnitkey = admobRewardedList.FirstOrDefault(x => x.Value > rewardedList[0].Value).Key;
+            return admobAdUnitkey;
+        }
+        else
+        {
+            return "ca-app-pub-3940256099942544/5224354917";
+        }
     }
 
     #endregion
@@ -835,7 +1111,7 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
 
     #endregion
 
-      //due to the fact that there is no method in plugin to get the bidmachine we should fetch the price from the string and convert it to double
+      //due to the fact that there is no method in plugin to get the bidmachine price we should fetch the price from the string and convert it to double
     public double FetchBidmachineAuctionPrice(string auctionResult)
     {
          //fetch the price from the auction result
@@ -845,9 +1121,7 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
 
         // convert to double using 'NumberStyles.Number,CultureInfo.InvariantCulture' due to different localizations
         double bmPrice = double.TryParse(newPrice, NumberStyles.Number,CultureInfo.InvariantCulture, out bmPrice) ? bmPrice : 0.01;
-        
-        //add the bidmachine price to the list for comparing
-       return bmPrice;
+        return bmPrice;
     }
 
     #region BannerRequest Callbacks
@@ -866,6 +1140,8 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
         //add the bidmachine price to the list for comparing
         bannerList.Add(new KeyValuePair<string, double>("bidmachine", FetchBidmachineAuctionPrice(auctionResult)));
 
+        RequestAdmobBannerAd(CompareBannerPricesForAdmob());
+
         if (!string.IsNullOrEmpty(auctionResult))
         {
             Debug.Log($"BannerRequestListener - onBannerRequestSuccess" +
@@ -875,6 +1151,7 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
 
     public void onBannerRequestFailed(BannerRequest request, BMError error)
     {
+        RequestAdmobBannerAd(CompareBannerPricesForAdmob());
         Debug.Log("BidMachineUnity: onBannerRequestFailed");
         Debug.Log("BannerRequestListener - onBannerRequestFailed" +
                   $"BMError - {error.code} - {error.message}");
@@ -904,6 +1181,8 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
         //add the bidmachine price to the list for comparing
         interstitialList.Add(new KeyValuePair<string, double>("bidmachine", FetchBidmachineAuctionPrice(auctionResult)));
 
+        RequestAdmobInterstitialAd(CompareInterstitialPricesForAdmob());
+
         if (!string.IsNullOrEmpty(auctionResult))
         {
             Debug.Log($"InterstitialRequestListener - onInterstitialRequestSuccess" +
@@ -917,6 +1196,7 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
 
     public void onInterstitialRequestFailed(InterstitialRequest request, BMError error)
     {
+        RequestAdmobInterstitialAd(CompareInterstitialPricesForAdmob());
         Debug.Log("BidMachineUnity: onInterstitialRequestFailed");
         Debug.Log($"InterstitialRequestListener - onInterstitialRequestFailed" +
                   $"BMError - {error.code} - {error.message}");
@@ -946,6 +1226,8 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
         //add the bidmachine price to the list for comparing
         rewardedList.Add(new KeyValuePair<string, double>("bidmachine", FetchBidmachineAuctionPrice(auctionResult)));
 
+        RequestAdmobRewardedAd(CompareRewardedPricesForAdmob());
+
         if (!string.IsNullOrEmpty(auctionResult))
         {
             Debug.Log($"RewardedRequestListener - onRewardedRequestSuccess" +
@@ -959,6 +1241,7 @@ public class BidMachineDemoController : MonoBehaviour, IInterstitialAdListener, 
 
     public void onRewardedRequestFailed(RewardedRequest request, BMError error)
     {
+        RequestAdmobRewardedAd(CompareRewardedPricesForAdmob());
         Debug.Log("BidMachineUnity: onRewardedRequestFailed");
         Debug.Log($"RewardedRequestListener - onRewardedRequestFailed" +
                   $"BMError - {error.code} - {error.message}");
